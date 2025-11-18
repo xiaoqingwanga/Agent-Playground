@@ -30,16 +30,26 @@ class SearchTool(BaseTool):
             "required": ["query"]
         }
 
-    def execute(self, query, engine, lang, **kwargs):
+    def execute(self, query, engine, lang, max_results, **kwargs):
         if engine != "duckduckgo":
             raise ValueError("Unsupported engine %s" % engine)
 
-        results = __search_ddgs_result(query, engine, **kwargs)
+        return self.__search_ddgs_result(query, lang, max_results, **kwargs)
 
-    def __search_ddgs_result(self, query, region, max_results, **kwargs):
+    def __search_ddgs_result(self, query, lang, max_results, **kwargs):
         from ddgs import DDGS
+        region = self._get_region(lang)
         with DDGS(proxy=self.proxy, timeout=self.timeout) as ddgs:
-            ddgs.text(query=query, safesearch="moderate", max_results=max_results, region="", **kwargs)
+            search_results = ddgs.text(query=query, safesearch="moderate", max_results=max_results, region=region, **kwargs)
+        results = []
+        for sr in search_results:
+            results.append({
+                "title": sr.get("title", ""),
+                "body": sr.get("body", ""),
+                "href": sr.get("href", ""),
+                "source": "duckduckgo"
+            })
+        return results
 
     def _get_region(self, lang: str) -> str:
         """Get region code based on language (for DuckDuckGo)"""
